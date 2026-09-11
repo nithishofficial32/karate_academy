@@ -27,9 +27,11 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/batches`);
       const data = await res.json();
-      setBatches(data);
-      if (data.length > 0 && !selectedBatchForAttendance) {
-        setSelectedBatchForAttendance(data[0]._id);
+      if (Array.isArray(data)) {
+        setBatches(data);
+        if (data.length > 0 && !selectedBatchForAttendance) {
+          setSelectedBatchForAttendance(data[0]._id);
+        }
       }
     } catch (err) { console.error(err); }
   };
@@ -38,7 +40,9 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/students`);
       const data = await res.json();
-      setStudents(data);
+      if (Array.isArray(data)) {
+        setStudents(data);
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -46,7 +50,9 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/fees`);
       const data = await res.json();
-      setFees(data);
+      if (Array.isArray(data)) {
+        setFees(data);
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -96,7 +102,10 @@ export default function App() {
     fetchFees();
   };
 
-  const batchStudents = students.filter(s => s.batchId?._id === selectedBatchForAttendance);
+  // Safely filter students to prevent undefined crashes
+  const batchStudents = Array.isArray(students) 
+    ? students.filter(s => s.batchId?._id === selectedBatchForAttendance) 
+    : [];
 
   const handleStatusChange = (studentId, status) => {
     setAttendanceSheet(prev => ({ ...prev, [studentId]: status }));
@@ -119,8 +128,8 @@ export default function App() {
     if (res.ok) alert('Attendance saved successfully! 🥋');
   };
 
-  const totalCollected = fees.filter(f => f.status === 'Paid').reduce((acc, curr) => acc + curr.amount, 0);
-  const totalPending = fees.filter(f => f.status === 'Pending').reduce((acc, curr) => acc + curr.amount, 0);
+  const totalCollected = Array.isArray(fees) ? fees.filter(f => f.status === 'Paid').reduce((acc, curr) => acc + curr.amount, 0) : 0;
+  const totalPending = Array.isArray(fees) ? fees.filter(f => f.status === 'Pending').reduce((acc, curr) => acc + curr.amount, 0) : 0;
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-100 font-sans overflow-hidden">
