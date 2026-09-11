@@ -11,6 +11,8 @@ export default function App() {
   
   const [newStudent, setNewStudent] = useState({ name: '', batchId: '', beltLevel: 'White', phone: '' });
   const [newBatch, setNewBatch] = useState({ name: '', days: '', time: '', instructor: '' });
+  const [isCreatingBatch, setIsCreatingBatch] = useState(false);
+  
   const [newFee, setNewFee] = useState({ studentId: '', month: 'September 2026', amount: 1500, status: 'Pending' });
 
   const [selectedBatchForAttendance, setSelectedBatchForAttendance] = useState('');
@@ -70,14 +72,29 @@ export default function App() {
 
   const handleAddBatch = async (e) => {
     e.preventDefault();
-    await fetch(`${API_URL}/batches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newBatch)
-    });
-    setNewBatch({ name: '', days: '', time: '', instructor: '' });
-    fetchBatches();
-    alert('Batch created successfully!');
+    setIsCreatingBatch(true);
+    try {
+      const res = await fetch(`${API_URL}/batches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBatch)
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setNewBatch({ name: '', days: '', time: '', instructor: '' });
+        await fetchBatches();
+        alert('Batch created successfully!');
+      } else {
+        alert(`Error: ${data.error || 'Failed to create batch'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while creating batch.');
+    } finally {
+      setIsCreatingBatch(false);
+    }
   };
 
   const handleAddFee = async (e) => {
@@ -102,7 +119,6 @@ export default function App() {
     fetchFees();
   };
 
-  // Safely filter students to prevent undefined crashes
   const batchStudents = Array.isArray(students) 
     ? students.filter(s => s.batchId?._id === selectedBatchForAttendance) 
     : [];
@@ -275,23 +291,46 @@ export default function App() {
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Instructor Name</label>
                     <input type="text" required value={newBatch.instructor} onChange={e => setNewBatch({...newBatch, instructor: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm" placeholder="Sensei Arun" />
                   </div>
-                  <button type="submit" className="w-full bg-red-600 text-white font-semibold py-2.5 rounded-lg hover:bg-red-700 transition">Create Batch</button>
+                  <button 
+                    type="submit" 
+                    disabled={isCreatingBatch}
+                    className="w-full bg-red-600 text-white font-semibold py-2.5 rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 disabled:bg-red-400"
+                  >
+                    {isCreatingBatch ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        Creating Batch...
+                      </>
+                    ) : 'Create Batch'}
+                  </button>
                 </form>
               </div>
 
-              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {batches.map(b => (
-                  <div key={b._id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-800">{b.name}</h3>
-                      <p className="text-sm text-slate-500 mt-1">🕒 {b.time}</p>
-                      <p className="text-sm text-slate-500">📅 {b.days}</p>
-                    </div>
-                    <div className="mt-4 pt-4 border-t flex justify-between items-center text-xs font-medium text-slate-600">
-                      <span>Instructor: {b.instructor}</span>
-                    </div>
+              <div className="lg:col-span-2">
+                <h2 className="text-lg font-bold text-slate-800 mb-4">Existing Batches ({batches.length})</h2>
+                {batches.length === 0 ? (
+                  <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center text-slate-500">
+                    No batches created yet. Add one using the form on the left!
                   </div>
-                ))}
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {batches.map(b => (
+                      <div key={b._id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg text-slate-800">{b.name}</h3>
+                          <p className="text-sm text-slate-500 mt-1">🕒 {b.time}</p>
+                          <p className="text-sm text-slate-500">📅 {b.days}</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t flex justify-between items-center text-xs font-medium text-slate-600">
+                          <span>Instructor: {b.instructor}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
